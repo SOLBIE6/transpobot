@@ -1,4 +1,6 @@
-const API = 'transpobot-l3glsib-g4.up.railway.app';
+// ====================== CONFIGURATION API ======================
+const API = '';   // Chemins relatifs → marche en local + sur Railway
+
 // Clock
 function tick() {
     document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR');
@@ -42,13 +44,22 @@ const fmtDT = d => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit',
 const badge = v => v ? `<span class="badge badge-${v}">${v.replace('_', ' ')}</span>` : '—';
 
 async function api(path) {
-    return (await fetch(API + path)).json();
+    try {
+        const response = await fetch(API + path);
+        if (!response.ok) throw new Error('Erreur serveur');
+        return await response.json();
+    } catch (e) {
+        console.error('API Error:', e);
+        return null;
+    }
 }
 
 // Stats + Dashboard
 async function loadStats() {
     try {
         const d = await api('/api/stats');
+        if (!d) return;
+
         document.getElementById('k-traj').textContent = d.total_trajets ?? '—';
         document.getElementById('k-enc').textContent = d.trajets_en_cours ?? '—';
         document.getElementById('k-veh').textContent = d.vehicules_actifs ?? '—';
@@ -67,7 +78,9 @@ async function loadStats() {
 async function loadDashTrajets() {
     try {
         const data = await api('/api/trajets/recent');
-        document.getElementById('bc').textContent = data.length;
+        if (!data) return;
+
+        document.getElementById('bc').textContent = data.length || 0;
 
         const el = document.getElementById('dash-trajets');
         if (!data.length) {
@@ -93,6 +106,8 @@ async function loadDashTrajets() {
 async function loadV() {
     try {
         const data = await api('/api/vehicules');
+        if (!data) throw new Error();
+
         let a = 0, m = 0, h = 0;
         data.forEach(v => {
             if (v.statut === 'actif') a++;
@@ -124,6 +139,8 @@ async function loadV() {
 async function loadC() {
     try {
         const data = await api('/api/chauffeurs');
+        if (!data) throw new Error();
+
         document.getElementById('cwrap').innerHTML = `<table class="data-table" id="ctbl">
             <thead><tr><th>Nom complet</th><th>N° Permis</th><th>Catégorie</th><th>Téléphone</th><th>Véhicule assigné</th><th>Embauche</th></tr></thead>
             <tbody>${data.map(c => `
@@ -144,6 +161,8 @@ async function loadC() {
 async function loadT() {
     try {
         const data = await api('/api/trajets/recent');
+        if (!data) throw new Error();
+
         document.getElementById('twrap').innerHTML = `<table class="data-table" id="ttbl">
             <thead><tr><th>Ligne</th><th>Chauffeur</th><th>Véhicule</th><th>Départ</th><th>Arrivée</th><th>Statut</th><th>Recette</th></tr></thead>
             <tbody>${data.map(t => `
@@ -233,6 +252,7 @@ async function sendMsg() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: q })
         });
+        
         const d = await r.json();
 
         document.querySelector('._loading')?.remove();
@@ -253,7 +273,7 @@ async function sendMsg() {
         }
     } catch (e) {
         document.querySelector('._loading')?.remove();
-        addMsg('bot', '❌ Erreur de connexion au serveur.');
+        addMsg('bot', '❌ Erreur de connexion au serveur. Vérifiez que le backend est démarré.');
     }
 }
 
@@ -277,11 +297,10 @@ function loadExampleQuestions() {
     `).join('');
 }
 
-// ==================== RESPONSIVE MENU (CORRIGÉ) ====================
+// ==================== RESPONSIVE MENU ====================
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebar-overlay');
-    
     if (sidebar) sidebar.classList.toggle('open');
     if (overlay) overlay.classList.toggle('active');
 }
@@ -291,14 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const hamburger = document.getElementById('hamburger-btn');
     const overlay = document.getElementById('sidebar-overlay');
     
-    if (hamburger) {
-        hamburger.addEventListener('click', toggleSidebar);
-    }
-    if (overlay) {
-        overlay.addEventListener('click', toggleSidebar);
-    }
+    if (hamburger) hamburger.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', toggleSidebar);
 
-    // Fermer le menu quand on clique sur un élément de navigation (sur mobile)
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', () => {
             const sidebar = document.getElementById('sidebar');

@@ -11,7 +11,7 @@
 <body>
     <!-- TOPBAR -->
     <div class="topbar">
-        <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+        <button class="hamburger" id="hamburger-btn" aria-label="Menu">
             <span></span><span></span><span></span>
         </button>
         <div class="logo">
@@ -24,10 +24,10 @@
         <div class="topbar-pill">Système actif</div>
     </div>
 
-    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
     <div class="layout">
         <!-- SIDEBAR -->
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="sidebar-section">Navigation</div>
             <div class="nav-item active" onclick="go('dashboard',this)"><i class="fa-solid fa-gauge-high nav-icon"></i> Tableau de bord</div>
             <div class="nav-item" onclick="go('vehicules',this)"><i class="fa-solid fa-bus nav-icon"></i> Flotte <span class="nav-badge" id="bv">—</span></div>

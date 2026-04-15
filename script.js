@@ -277,13 +277,38 @@ function loadExampleQuestions() {
         </button>
     `).join('');
 }
-// ==================== RESPONSIVE MENU ====================
+
+// ==================== RESPONSIVE MENU (CORRIGÉ) ====================
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('open');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar) sidebar.classList.toggle('open');
+    if (overlay) overlay.classList.toggle('active');
 }
 
-// Ajouter un bouton hamburger dans la topbar (à ajouter dans index.html si tu veux)
 // Initialisation
-loadAll();
-loadExampleQuestions();
+document.addEventListener('DOMContentLoaded', function() {
+    const hamburger = document.getElementById('hamburger-btn');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (hamburger) {
+        hamburger.addEventListener('click', toggleSidebar);
+    }
+    if (overlay) {
+        overlay.addEventListener('click', toggleSidebar);
+    }
+
+    // Fermer le menu quand on clique sur un élément de navigation (sur mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sidebar) sidebar.classList.remove('open');
+            if (overlay) overlay.classList.remove('active');
+        });
+    });
+
+    loadAll();
+    loadExampleQuestions();
+});

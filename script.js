@@ -1,5 +1,4 @@
-const API = 'https://transpobot-production-433d.up.railway.app';
-
+const API = 'transpobot-l3glsib-g4.up.railway.app';
 // Clock
 function tick() {
     document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR');

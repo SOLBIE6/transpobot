@@ -50,45 +50,78 @@ trajets(id, ligne_id, chauffeur_id, vehicule_id, date_heure_depart, date_heure_a
 incidents(id, trajet_id, type[panne/accident/retard/autre], description, gravite[faible/moyen/grave], date_incident, resolu)
 """
 
-SYSTEM_PROMPT = f"""Tu es TranspoBot, l'assistant IA d'une compagnie de transport urbain au Sénégal.
-Tu réponds en français (ou en anglais si l'utilisateur écrit en anglais).
+SYSTEM_PROMPT = f"""
+Tu es TranspoBot, un assistant IA expert en gestion de transport urbain au Sénégal (ESP/UCAD).
+Tu es précis, professionnel, et tu analyses les données pour aider à la prise de décision.
 
+📊 BASE DE DONNÉES DISPONIBLE :
 {DB_SCHEMA}
 
-Valeurs exactes des colonnes ENUM :
-  vehicules.statut      : 'actif' | 'maintenance' | 'hors_service'
-  vehicules.type        : 'bus' | 'minibus' | 'taxi'
-  trajets.statut        : 'planifie' | 'en_cours' | 'termine' | 'annule'
-  incidents.type        : 'panne' | 'accident' | 'retard' | 'autre'
-  incidents.gravite     : 'faible' | 'moyen' | 'grave'
-  incidents.resolu      : TRUE | FALSE
-  tarifs.type_client    : 'normal' | 'etudiant' | 'senior'
-  chauffeurs.disponibilite : TRUE | FALSE
+📌 VALEURS EXACTES DES ENUM (respecte-les à la lettre dans le SQL) :
+vehicules.statut       : 'actif' | 'maintenance' | 'hors_service'
+vehicules.type         : 'bus' | 'minibus' | 'taxi'
+trajets.statut         : 'planifie' | 'en_cours' | 'termine' | 'annule'
+incidents.type         : 'panne' | 'accident' | 'retard' | 'autre'
+incidents.gravite      : 'faible' | 'moyen' | 'grave'
+incidents.resolu       : TRUE | FALSE
+tarifs.type_client     : 'normal' | 'etudiant' | 'senior'
+chauffeurs.disponibilite : TRUE | FALSE
 
-RÈGLES STRICTES :
-1. Génère UNIQUEMENT des requêtes SELECT. Jamais INSERT/UPDATE/DELETE/DROP/ALTER.
-2. Réponds TOUJOURS en JSON valide avec ce format exact :
-   {{"sql": "SELECT ...", "explication": "Réponse en une phrase claire"}}
-3. Si pas de SQL nécessaire (salutation, hors sujet) :
-   {{"sql": null, "explication": "Ta réponse directe"}}
-4. Utilise des alias lisibles : COUNT(*) AS total, c.nom AS chauffeur_nom
-5. Toujours ajouter LIMIT 50 maximum
-6. Formules de dates :
-   - Cette semaine  : date_col >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-   - Ce mois        : MONTH(date_col)=MONTH(NOW()) AND YEAR(date_col)=YEAR(NOW())
-   - Aujourd'hui    : DATE(date_col) = CURDATE()
-7. Pour joindre chauffeur : JOIN chauffeurs c ON t.chauffeur_id = c.id
-8. Pour joindre véhicule  : JOIN vehicules v ON t.vehicule_id = v.id
+⚠️ RÈGLES ABSOLUES :
+1. Génère UNIQUEMENT des requêtes SELECT (jamais INSERT/UPDATE/DELETE/DROP).
+2. Réponds TOUJOURS en JSON valide avec ce format EXACT, sans markdown, sans backticks :
+   {{
+     "sql": "SELECT ... ou null",
+     "explication": "réponse claire et utile",
+     "conseil": "conseil optionnel ou null"
+   }}
+3. Ne mets jamais de texte hors du JSON. Pas de ```json, pas de commentaires.
+4. Si la question est floue, génère quand même une SQL pertinente et explique ton interprétation.
+5. Toujours LIMIT 50 maximum.
+6. Utilise des alias lisibles : COUNT(*) AS total, SUM(recette) AS recette_totale.
 
-EXEMPLES :
+📅 GESTION DES DATES :
+- Aujourd'hui       : DATE(col) = CURDATE()
+- Cette semaine     : col >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+- Ce mois           : MONTH(col) = MONTH(NOW()) AND YEAR(col) = YEAR(NOW())
+- Mois spécifique   : MONTH(col) = N AND YEAR(col) = AAAA
+- Année en cours    : YEAR(col) = YEAR(NOW())
+
+🔗 JOINTURES COURANTES :
+JOIN chauffeurs c ON t.chauffeur_id = c.id
+JOIN vehicules v ON t.vehicule_id = v.id
+JOIN lignes l ON t.ligne_id = l.id
+JOIN incidents i ON i.trajet_id = t.id
+
+💡 CHAMP "conseil" (optionnel) :
+- Ajoute un conseil métier pertinent si tu détectes une anomalie ou opportunité.
+- Ex: "5 véhicules en maintenance en même temps peut indiquer un problème de maintenance préventive."
+- Laisse null si rien de notable.
+
+💬 STYLE :
+- Parle comme un gestionnaire de flotte, pas comme un technicien.
+- Sois concis mais informatif. Donne des chiffres précis quand possible.
+- Langue : français prioritaire, anglais si la question est en anglais.
+
+📌 EXEMPLES COMPLETS :
+
 Q: Combien de trajets cette semaine ?
-R: {{"sql": "SELECT COUNT(*) AS total FROM trajets WHERE date_heure_depart >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND statut='termine'", "explication": "Il y a X trajets terminés sur les 7 derniers jours."}}
+R: {{"sql":"SELECT COUNT(*) AS total FROM trajets WHERE date_heure_depart >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND statut='termine' LIMIT 50","explication":"Voici le nombre de trajets terminés au cours des 7 derniers jours.","conseil":null}}
 
-Q: Quel chauffeur a le plus d'incidents ce mois ?
-R: {{"sql": "SELECT c.nom, c.prenom, COUNT(i.id) AS nb_incidents FROM incidents i JOIN trajets t ON i.trajet_id=t.id JOIN chauffeurs c ON t.chauffeur_id=c.id WHERE MONTH(i.date_incident)=MONTH(NOW()) AND YEAR(i.date_incident)=YEAR(NOW()) GROUP BY c.id ORDER BY nb_incidents DESC LIMIT 1", "explication": "Le chauffeur avec le plus d'incidents ce mois."}}
+Q: Quel véhicule génère le plus de recettes ?
+R: {{"sql":"SELECT v.immatriculation, v.type, SUM(t.recette) AS recette_totale FROM trajets t JOIN vehicules v ON t.vehicule_id=v.id WHERE t.statut='termine' GROUP BY v.id ORDER BY recette_totale DESC LIMIT 10","explication":"Voici le classement des véhicules par recettes générées depuis le début.","conseil":"Comparez avec le kilométrage pour évaluer la rentabilité réelle par véhicule."}}
 
-Q: Bonjour !
-R: {{"sql": null, "explication": "Bonjour ! Je suis TranspoBot. Posez-moi des questions sur vos véhicules, trajets ou chauffeurs."}}
+Q: Chauffeurs disponibles ?
+R: {{"sql":"SELECT nom, prenom, telephone, numero_permis FROM chauffeurs WHERE disponibilite=TRUE ORDER BY nom LIMIT 50","explication":"Voici la liste des chauffeurs actuellement disponibles et non affectés.","conseil":null}}
+
+Q: Y a-t-il des incidents non résolus graves ?
+R: {{"sql":"SELECT i.type, i.description, i.date_incident, c.nom AS chauffeur, v.immatriculation FROM incidents i JOIN trajets t ON i.trajet_id=t.id JOIN chauffeurs c ON t.chauffeur_id=c.id JOIN vehicules v ON t.vehicule_id=v.id WHERE i.resolu=FALSE AND i.gravite='grave' ORDER BY i.date_incident DESC LIMIT 50","explication":"Voici les incidents graves encore non résolus, triés du plus récent au plus ancien.","conseil":"Ces incidents doivent être traités en priorité pour éviter des risques opérationnels."}}
+
+Q: Bonjour
+R: {{"sql":null,"explication":"Bonjour 👋 Je suis TranspoBot, votre assistant intelligent de gestion de flotte. Posez-moi vos questions sur vos trajets, chauffeurs, véhicules ou incidents !","conseil":null}}
+
+Q: Merci
+R: {{"sql":null,"explication":"Avec plaisir ! N'hésitez pas si vous avez d'autres questions sur votre flotte ou vos opérations.","conseil":null}}
 """
 
 # ── Connexion MySQL ────────────────────────────────────────────
@@ -106,25 +139,30 @@ def execute_query(sql: str):
         conn.close()
 
 # ── Appel LLM ─────────────────────────────────────────────────
-async def ask_llm(question: str) -> dict:
+async def ask_llm(question: str, history: list = []) -> dict:
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    # Ajouter l'historique de conversation (max 10 derniers échanges)
+    for h in history[-10:]:
+        messages.append(h)
+    messages.append({"role": "user", "content": question})
+
     async with httpx.AsyncClient() as client:
         response = await client.post(
             f"{LLM_BASE_URL}/chat/completions",
             headers={"Authorization": f"Bearer {LLM_API_KEY}"},
             json={
                 "model": LLM_MODEL,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user",   "content": question},
-                ],
+                "messages": messages,
                 "temperature": 0,
             },
             timeout=30,
         )
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
-        # Extraire le JSON de la réponse
         import json
+        # Nettoyer les éventuels backticks markdown
+        content = re.sub(r'```json\s*', '', content)
+        content = re.sub(r'```\s*', '', content)
         match = re.search(r'\{.*\}', content, re.DOTALL)
         if match:
             return json.loads(match.group())
@@ -133,21 +171,35 @@ async def ask_llm(question: str) -> dict:
 # ── Routes API ─────────────────────────────────────────────────
 class ChatMessage(BaseModel):
     question: str
+    history: list = []  # Historique [{role: "user"|"assistant", content: "..."}]
 
 @app.post("/api/chat")
 async def chat(msg: ChatMessage):
     """Point d'entrée principal : question → SQL → résultats"""
     try:
-        llm_response = await ask_llm(msg.question)
+        llm_response = await ask_llm(msg.question, msg.history)
         sql = llm_response.get("sql")
         explication = llm_response.get("explication", "")
+        conseil = llm_response.get("conseil")  # Nouveau champ conseil
 
         if not sql:
-            return {"answer": explication, "data": [], "sql": None}
+            return {"answer": explication, "conseil": conseil, "data": [], "sql": None}
 
-        data = execute_query(sql)
+        try:
+            data = execute_query(sql)
+        except Exception as sql_err:
+            # Si la requête SQL échoue, renvoyer l'explication sans planter
+            return {
+                "answer": explication,
+                "conseil": f"⚠️ Erreur lors de l'exécution SQL : {str(sql_err)}",
+                "data": [],
+                "sql": sql,
+                "count": 0,
+            }
+
         return {
             "answer": explication,
+            "conseil": conseil,
             "data": data,
             "sql": sql,
             "count": len(data),
@@ -167,6 +219,7 @@ def get_stats():
         "vehicules_actifs": "SELECT COUNT(*) as n FROM vehicules WHERE statut='actif'",
         "incidents_ouverts":"SELECT COUNT(*) as n FROM incidents WHERE resolu=FALSE",
         "recette_totale":   "SELECT COALESCE(SUM(recette),0) as n FROM trajets WHERE statut='termine'",
+        "chauffeurs_libres":"SELECT COUNT(*) as n FROM chauffeurs WHERE disponibilite=TRUE",
     }
     for key, sql in queries.items():
         result = execute_query(sql)
@@ -207,3 +260,7 @@ def health():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    def is_summary_request(q: str):
+        q = q.lower()
+        keywords = ["récap", "recap", "résumé", "resume", "explique", "parle"]
+        return any(k in q for k in keywords)

@@ -3,182 +3,513 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TranspoBot — Assistant IA Transport</title>
+<title>TranspoBot — Gestion de Transport Urbain</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; }
-  header { background: #1a56db; color: white; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  header h1 { font-size: 1.4rem; }
-  header span { font-size: 2rem; }
-  .container { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-  .card { background: white; border-radius: 12px; padding: 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1rem; }
-  .stat { background: #eff6ff; border-radius: 8px; padding: 0.8rem; text-align: center; }
-  .stat .val { font-size: 1.8rem; font-weight: bold; color: #1a56db; }
-  .stat .lbl { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
-  /* Chat */
-  .chat-box { height: 400px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: #f8fafc; }
-  .msg { margin-bottom: 0.8rem; }
-  .msg.user .bubble { background: #1a56db; color: white; margin-left: auto; }
-  .msg.bot .bubble { background: white; border: 1px solid #e2e8f0; }
-  .bubble { display: inline-block; padding: 0.6rem 1rem; border-radius: 12px; max-width: 85%; font-size: 0.9rem; line-height: 1.5; }
-  .msg.user { text-align: right; }
-  .chat-input { display: flex; gap: 0.5rem; }
-  .chat-input input { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.7rem 1rem; font-size: 0.95rem; outline: none; }
-  .chat-input input:focus { border-color: #1a56db; }
-  .chat-input button { background: #1a56db; color: white; border: none; border-radius: 8px; padding: 0.7rem 1.2rem; cursor: pointer; font-size: 0.95rem; }
-  .chat-input button:hover { background: #1e40af; }
-  .sql-preview { background: #1e293b; color: #94a3b8; font-family: monospace; font-size: 0.78rem; padding: 0.6rem; border-radius: 6px; margin-top: 0.4rem; white-space: pre-wrap; }
-  /* Suggestions */
-  .suggestions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.8rem; }
-  .suggestions button { background: #eff6ff; color: #1a56db; border: 1px solid #bfdbfe; border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.8rem; cursor: pointer; }
-  .suggestions button:hover { background: #dbeafe; }
-  /* Table résultats */
-  .results table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-  .results th { background: #1a56db; color: white; padding: 0.5rem; text-align: left; }
-  .results td { padding: 0.5rem; border-bottom: 1px solid #e2e8f0; }
-  .results tr:hover td { background: #f0f4f8; }
-  h2 { font-size: 1rem; color: #374151; margin-bottom: 0.8rem; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
-  .badge-green { background: #dcfce7; color: #166534; }
-  .badge-orange { background: #fff7ed; color: #9a3412; }
-  .badge-red { background: #fee2e2; color: #991b1b; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#07090F; --surface:#0D1117; --surface2:#161B24; --surface3:#1E2535;
+  --border:#1F2937; --border2:#2D3748;
+  --accent:#3B82F6; --accent2:#06B6D4; --green:#10B981; --orange:#F59E0B;
+  --red:#EF4444; --purple:#8B5CF6;
+  --text:#F1F5F9; --text2:#94A3B8; --text3:#475569;
+  --r:10px; --r2:16px; --sidebar-w:240px; --header-h:60px;
+}
+html,body{height:100%}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* TOPBAR */
+.topbar{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.25rem;gap:1rem;flex-shrink:0;z-index:100}
+.logo{display:flex;align-items:center;gap:9px;font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-0.02em;color:var(--text);flex-shrink:0}
+.logo-badge{width:30px;height:30px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.topbar-spacer{flex:1}
+.topbar-pill{display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:20px;padding:4px 12px;font-size:0.72rem;color:var(--green);font-weight:500}
+.topbar-pill::before{content:'';width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.topbar-time{font-size:0.78rem;color:var(--text3);font-variant-numeric:tabular-nums;font-family:'Syne',monospace}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1rem 0.75rem;gap:0.2rem;flex-shrink:0;overflow-y:auto}
+.sidebar-section{font-size:0.65rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);padding:0.5rem 0.5rem 0.3rem;margin-top:0.5rem}
+.nav-item{display:flex;align-items:center;gap:9px;padding:0.55rem 0.75rem;border-radius:var(--r);cursor:pointer;transition:all 0.15s;font-size:0.85rem;color:var(--text2);font-weight:400;position:relative}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(59,130,246,0.12);color:var(--accent);font-weight:500}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--accent);border-radius:0 2px 2px 0}
+.nav-icon{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--accent);color:white;font-size:0.65rem;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+.sidebar-footer{margin-top:auto;padding-top:1rem;border-top:1px solid var(--border)}
+
+/* MAIN */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.page{display:none;flex-direction:column;height:100%;overflow:hidden}
+.page.active{display:flex}
+
+/* PAGE HEADER */
+.page-header{padding:1rem 1.5rem 0.75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:1rem;flex-shrink:0}
+.page-title{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:700;letter-spacing:-0.02em}
+.page-sub{font-size:0.75rem;color:var(--text2);margin-top:2px}
+.page-actions{margin-left:auto;display:flex;gap:0.5rem;align-items:center}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0.42rem 0.9rem;border-radius:var(--r);font-size:0.8rem;font-weight:500;border:none;cursor:pointer;transition:all 0.15s;font-family:'Inter',sans-serif}
+.btn-primary{background:var(--accent);color:white}.btn-primary:hover{background:#2563EB;transform:translateY(-1px)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--surface3);color:var(--text)}
+
+/* CONTENT */
+.content{padding:1.1rem 1.5rem;flex:1;overflow-y:auto}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0.9rem;margin-bottom:1rem}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:1rem 1.1rem;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.2s;animation:fadeUp 0.4s ease both}
+.kpi-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.kpi-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-card.blue::after{background:var(--accent)}.kpi-card.cyan::after{background:var(--accent2)}
+.kpi-card.green::after{background:var(--green)}.kpi-card.orange::after{background:var(--orange)}
+.kpi-card:nth-child(1){animation-delay:.05s}.kpi-card:nth-child(2){animation-delay:.1s}
+.kpi-card:nth-child(3){animation-delay:.15s}.kpi-card:nth-child(4){animation-delay:.2s}
+.kpi-icon{font-size:18px;margin-bottom:0.5rem}
+.kpi-val{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:800;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums}
+.kpi-card.blue .kpi-val{color:var(--accent)}.kpi-card.cyan .kpi-val{color:var(--accent2)}
+.kpi-card.green .kpi-val{color:var(--green)}.kpi-card.orange .kpi-val{color:var(--orange)}
+.kpi-label{font-size:0.73rem;color:var(--text2)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.card-header{padding:0.75rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.5rem}
+.card-title{font-size:0.83rem;font-weight:600;color:var(--text)}
+.card-actions{margin-left:auto}
+.card-body{padding:1rem}
+
+/* TABLES */
+.data-table{width:100%;border-collapse:collapse;font-size:0.8rem}
+.data-table th{padding:0.55rem 0.8rem;text-align:left;font-size:0.67rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface2)}
+.data-table td{padding:0.6rem 0.8rem;border-bottom:1px solid var(--border);color:var(--text2)}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:rgba(255,255,255,0.02);color:var(--text)}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:0.67rem;font-weight:600;font-family:'Syne',monospace;text-transform:uppercase;letter-spacing:0.04em}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%}
+.badge-actif,.badge-termine{background:rgba(16,185,129,0.1);color:var(--green)}.badge-actif::before,.badge-termine::before{background:var(--green)}
+.badge-maintenance,.badge-en_cours{background:rgba(245,158,11,0.1);color:var(--orange)}.badge-maintenance::before,.badge-en_cours::before{background:var(--orange)}
+.badge-hors_service,.badge-annule,.badge-grave{background:rgba(239,68,68,0.1);color:var(--red)}.badge-hors_service::before,.badge-annule::before,.badge-grave::before{background:var(--red)}
+.badge-planifie,.badge-faible{background:rgba(59,130,246,0.1);color:var(--accent)}.badge-planifie::before,.badge-faible::before{background:var(--accent)}
+.badge-moyen{background:rgba(139,92,246,0.1);color:var(--purple)}.badge-moyen::before{background:var(--purple)}
+.badge-resolu{background:rgba(16,185,129,0.1);color:var(--green)}.badge-resolu::before{background:var(--green)}
+.badge-ouvert{background:rgba(239,68,68,0.1);color:var(--red)}.badge-ouvert::before{background:var(--red)}
+
+/* STAT MINI */
+.stat-mini{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:0.65rem 0.85rem;display:flex;align-items:center;gap:0.7rem}
+.stat-mini-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.stat-mini-val{font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700}
+.stat-mini-label{font-size:0.7rem;color:var(--text3)}
+
+/* SEARCH */
+.search-bar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:0.42rem 0.8rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.8rem;outline:none;width:200px;transition:border-color 0.15s}
+.search-bar::placeholder{color:var(--text3)}.search-bar:focus{border-color:var(--accent)}
+
+/* GRID */
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.85rem}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem}
+
+/* EMPTY */
+.empty-state{text-align:center;padding:2rem;color:var(--text3);font-size:0.83rem}
+.empty-state .ei{font-size:1.8rem;margin-bottom:0.5rem}
+
+/* CHAT */
+.chat-wrap{display:grid;grid-template-columns:1fr 320px;gap:1rem;flex:1;overflow:hidden;padding:1rem 1.5rem}
+.chat-panel{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.chat-msgs{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:0.7rem}
+.chat-msg{display:flex;gap:8px;max-width:84%;animation:fadeUp 0.25s ease}
+.chat-msg.user{margin-left:auto;flex-direction:row-reverse}
+.chat-av{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:2px}
+.chat-msg.bot .chat-av{background:linear-gradient(135deg,var(--accent),var(--accent2))}
+.chat-msg.user .chat-av{background:var(--surface3);border:1px solid var(--border2)}
+.bubble{padding:0.55rem 0.85rem;border-radius:10px;font-size:0.83rem;line-height:1.55}
+.chat-msg.bot .bubble{background:var(--surface2);border:1px solid var(--border);border-top-left-radius:3px}
+.chat-msg.user .bubble{background:var(--accent);color:white;border-top-right-radius:3px}
+.sql-chip{background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:0.45rem 0.7rem;font-family:'Syne',monospace;font-size:0.7rem;color:var(--accent2);white-space:pre-wrap;word-break:break-all;margin-top:0.35rem}
+.res-wrap{margin-top:0.45rem;border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.res-wrap table{width:100%;border-collapse:collapse;font-size:0.76rem}
+.res-wrap th{background:var(--surface3);padding:0.4rem 0.65rem;text-align:left;font-size:0.66rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border)}
+.res-wrap td{padding:0.4rem 0.65rem;border-bottom:1px solid rgba(31,41,55,0.5);color:var(--text2)}
+.res-wrap tr:last-child td{border-bottom:none}
+.chat-sugs{display:flex;flex-wrap:wrap;gap:0.35rem;padding:0.6rem 0.85rem;border-bottom:1px solid var(--border)}
+.sug{background:var(--surface2);border:1px solid var(--border2);color:var(--text2);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-family:'Inter',sans-serif;cursor:pointer;transition:all 0.15s}
+.sug:hover{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,0.06)}
+.chat-input-row{padding:0.75rem;border-top:1px solid var(--border);display:flex;gap:0.5rem;align-items:center}
+.chat-field{flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r);padding:0.55rem 0.85rem;color:var(--text);font-family:'Inter',sans-serif;font-size:0.83rem;outline:none;transition:border-color 0.15s}
+.chat-field::placeholder{color:var(--text3)}.chat-field:focus{border-color:var(--accent)}
+.send-btn{width:36px;height:36px;background:var(--accent);border:none;border-radius:var(--r);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;flex-shrink:0}
+.send-btn:hover{background:#2563EB;transform:scale(1.05)}.send-btn svg{width:14px;height:14px;fill:white}
+.chat-side{display:flex;flex-direction:column;gap:0.85rem;overflow-y:auto}
+.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--text3);margin:0 2px;animation:bounce 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:0.4}40%{transform:translateY(-5px);opacity:1}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body>
-<header>
-  <span>🚌</span>
-  <div>
-    <h1>TranspoBot</h1>
-    <small>Assistant IA — Gestion de Transport</small>
-  </div>
-</header>
 
-<div class="container">
-  <!-- Colonne gauche -->
-  <div>
-    <div class="card" style="margin-bottom:1rem">
-      <h2>📊 Tableau de bord</h2>
-      <div class="stats-grid" id="stats">
-        <div class="stat"><div class="val">—</div><div class="lbl">Trajets terminés</div></div>
-        <div class="stat"><div class="val">—</div><div class="lbl">En cours</div></div>
-        <div class="stat"><div class="val">—</div><div class="lbl">Véhicules actifs</div></div>
-        <div class="stat"><div class="val">—</div><div class="lbl">Incidents ouverts</div></div>
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><div class="logo-badge">🚌</div>TranspoBot</div>
+  <span style="color:var(--text3);font-size:0.73rem;margin-left:4px">Gestion de Transport Urbain</span>
+  <div class="topbar-spacer"></div>
+  <div class="topbar-time" id="clock">--:--:--</div>
+  <div class="topbar-pill">Système actif</div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-section">Navigation</div>
+    <div class="nav-item active" onclick="go('dashboard',this)"><span class="nav-icon">📊</span>Tableau de bord</div>
+    <div class="nav-item" onclick="go('vehicules',this)"><span class="nav-icon">🚌</span>Flotte<span class="nav-badge" id="bv">—</span></div>
+    <div class="nav-item" onclick="go('chauffeurs',this)"><span class="nav-icon">👤</span>Chauffeurs<span class="nav-badge" id="bc">—</span></div>
+    <div class="nav-item" onclick="go('trajets',this)"><span class="nav-icon">🛣️</span>Trajets</div>
+    <div class="nav-item" onclick="go('incidents',this)"><span class="nav-icon">⚠️</span>Incidents<span class="nav-badge" id="bi" style="background:var(--red)">—</span></div>
+    <div class="sidebar-section">Intelligence IA</div>
+    <div class="nav-item" onclick="go('chat',this)"><span class="nav-icon">🤖</span>Assistant IA</div>
+    <div class="sidebar-footer">
+      <div style="padding:0.5rem 0.75rem;font-size:0.68rem;color:var(--text3)">ESP/UCAD — GLSi L3<br>Pr. Ahmath Bamba MBACKE</div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Tableau de bord</div><div class="page-sub">Vue d'ensemble en temps réel</div></div>
+        <div class="page-actions"><button class="btn btn-ghost" onclick="loadAll()">↺ Actualiser</button></div>
+      </div>
+      <div class="content">
+        <div class="kpi-grid">
+          <div class="kpi-card blue"><div class="kpi-icon">🛣️</div><div class="kpi-val" id="k-traj">—</div><div class="kpi-label">Trajets terminés</div></div>
+          <div class="kpi-card orange"><div class="kpi-icon">⚡</div><div class="kpi-val" id="k-enc">—</div><div class="kpi-label">En cours</div></div>
+          <div class="kpi-card green"><div class="kpi-icon">🚌</div><div class="kpi-val" id="k-veh">—</div><div class="kpi-label">Véhicules actifs</div></div>
+          <div class="kpi-card cyan"><div class="kpi-icon">⚠️</div><div class="kpi-val" id="k-inc">—</div><div class="kpi-label">Incidents ouverts</div></div>
+        </div>
+        <div class="card" style="margin-bottom:1rem;background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(6,182,212,0.06));border-color:rgba(59,130,246,0.18)">
+          <div class="card-body" style="display:flex;align-items:center;gap:1.2rem;padding:0.9rem 1.1rem">
+            <div style="font-size:1.8rem">💰</div>
+            <div>
+              <div style="font-size:0.73rem;color:var(--text2);margin-bottom:2px">Recette totale générée</div>
+              <div style="font-family:'Syne',sans-serif;font-size:1.7rem;font-weight:800;color:var(--accent)" id="k-rec">— FCFA</div>
+            </div>
+            <div style="margin-left:auto;text-align:right">
+              <div style="font-size:0.72rem;color:var(--text3)">Dernière mise à jour</div>
+              <div style="font-size:0.76rem;color:var(--text2)" id="k-upd">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span style="font-size:13px">🕒</span><span class="card-title">Trajets récents</span>
+            <div class="card-actions"><button class="btn btn-ghost" style="font-size:0.72rem;padding:0.28rem 0.65rem" onclick="go('trajets',document.querySelectorAll('.nav-item')[3])">Voir tout →</button></div>
+          </div>
+          <div id="dash-trajets"><div class="empty-state"><div class="ei">⏳</div>Chargement...</div></div>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>🕒 Trajets récents</h2>
-      <div class="results" id="trajets-table"><p style="color:#94a3b8;font-size:0.85rem">Chargement...</p></div>
-    </div>
-  </div>
-
-  <!-- Colonne droite : Chat -->
-  <div class="card">
-    <h2>💬 Assistant TranspoBot</h2>
-    <div class="suggestions">
-      <button onclick="ask('Combien de trajets ont été effectués cette semaine ?')">Trajets cette semaine</button>
-      <button onclick="ask('Quel chauffeur a le plus de trajets ?')">Meilleur chauffeur</button>
-      <button onclick="ask('Quels véhicules sont en maintenance ?')">Véhicules en maintenance</button>
-      <button onclick="ask('Liste les incidents graves non résolus')">Incidents graves</button>
-      <button onclick="ask('Quelle est la recette totale du mois de mars 2026 ?')">Recette mars 2026</button>
-    </div>
-
-    <div class="chat-box" id="chat-box">
-      <div class="msg bot">
-        <div class="bubble">👋 Bonjour ! Je suis TranspoBot, votre assistant intelligent.<br>Posez-moi n'importe quelle question sur votre flotte, vos trajets ou vos chauffeurs !</div>
+    <!-- VÉHICULES -->
+    <div class="page" id="page-vehicules">
+      <div class="page-header">
+        <div><div class="page-title">Flotte de véhicules</div><div class="page-sub">Suivi et état des véhicules</div></div>
+        <div class="page-actions"><input class="search-bar" placeholder="🔍 Rechercher..." oninput="filterRows('vtbl',this.value)"></div>
+      </div>
+      <div class="content">
+        <div class="grid-3" style="margin-bottom:1rem">
+          <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(16,185,129,0.12)">✅</div><div><div class="stat-mini-val" id="va" style="color:var(--green)">—</div><div class="stat-mini-label">Actifs</div></div></div>
+          <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(245,158,11,0.12)">🔧</div><div><div class="stat-mini-val" id="vm" style="color:var(--orange)">—</div><div class="stat-mini-label">En maintenance</div></div></div>
+          <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(239,68,68,0.12)">🚫</div><div><div class="stat-mini-val" id="vh" style="color:var(--red)">—</div><div class="stat-mini-label">Hors service</div></div></div>
+        </div>
+        <div class="card"><div id="vwrap"><div class="empty-state"><div class="ei">⏳</div>Chargement...</div></div></div>
       </div>
     </div>
 
-    <div class="chat-input">
-      <input type="text" id="user-input" placeholder="Ex: Combien de trajets ce mois-ci ?" onkeypress="if(event.key==='Enter') sendMessage()">
-      <button onclick="sendMessage()">Envoyer ➤</button>
+    <!-- CHAUFFEURS -->
+    <div class="page" id="page-chauffeurs">
+      <div class="page-header">
+        <div><div class="page-title">Registre des chauffeurs</div><div class="page-sub">Personnel de conduite</div></div>
+        <div class="page-actions"><input class="search-bar" placeholder="🔍 Rechercher..." oninput="filterRows('ctbl',this.value)"></div>
+      </div>
+      <div class="content">
+        <div class="card"><div id="cwrap"><div class="empty-state"><div class="ei">⏳</div>Chargement...</div></div></div>
+      </div>
     </div>
 
-    <div id="results-section" style="margin-top:1rem; display:none">
-      <h2>📋 Résultats</h2>
-      <div class="results" id="results-table"></div>
+    <!-- TRAJETS -->
+    <div class="page" id="page-trajets">
+      <div class="page-header">
+        <div><div class="page-title">Historique des trajets</div><div class="page-sub">20 trajets les plus récents</div></div>
+        <div class="page-actions"><input class="search-bar" placeholder="🔍 Rechercher..." oninput="filterRows('ttbl',this.value)"></div>
+      </div>
+      <div class="content">
+        <div class="card"><div id="twrap"><div class="empty-state"><div class="ei">⏳</div>Chargement...</div></div></div>
+      </div>
     </div>
-  </div>
+
+    <!-- INCIDENTS -->
+    <div class="page" id="page-incidents">
+      <div class="page-header">
+        <div><div class="page-title">Journal des incidents</div><div class="page-sub">Suivi et résolution</div></div>
+      </div>
+      <div class="content">
+        <div class="card"><div id="iwrap"><div class="empty-state"><div class="ei">⏳</div>Chargement...</div></div></div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="page" id="page-chat">
+      <div class="page-header">
+        <div><div class="page-title">🤖 Assistant IA — Text-to-SQL</div><div class="page-sub">Interrogez vos données en langage naturel</div></div>
+      </div>
+      <div class="chat-wrap">
+        <div class="chat-panel">
+          <div class="chat-sugs">
+            <button class="sug" onclick="ask('Combien de trajets cette semaine ?')">Trajets cette semaine</button>
+            <button class="sug" onclick="ask('Quel chauffeur a le plus de trajets ?')">Meilleur chauffeur</button>
+            <button class="sug" onclick="ask('Quels véhicules sont en maintenance ?')">Maintenance</button>
+            <button class="sug" onclick="ask('Liste les incidents graves non résolus')">Incidents graves</button>
+            <button class="sug" onclick="ask('Recette totale ce mois ?')">Recette du mois</button>
+          </div>
+          <div class="chat-msgs" id="chat-msgs">
+            <div class="chat-msg bot">
+              <div class="chat-av">🤖</div>
+              <div><div class="bubble">Bonjour ! Je suis <strong>TranspoBot</strong>.<br>Posez-moi des questions sur votre flotte, vos trajets ou vos chauffeurs.</div></div>
+            </div>
+          </div>
+          <div class="chat-input-row">
+            <input class="chat-field" id="chat-in" placeholder="Ex: Combien de trajets ce mois-ci ?" onkeydown="if(event.key==='Enter')sendMsg()">
+            <button class="send-btn" onclick="sendMsg()"><svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg></button>
+          </div>
+        </div>
+        <div class="chat-side">
+          <div class="card">
+            <div class="card-header"><span style="font-size:13px">📊</span><span class="card-title">Statistiques</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:0.55rem">
+              <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(59,130,246,0.12)">🛣️</div><div><div class="stat-mini-val" id="cs-t" style="color:var(--accent)">—</div><div class="stat-mini-label">Trajets terminés</div></div></div>
+              <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(245,158,11,0.12)">⚡</div><div><div class="stat-mini-val" id="cs-e" style="color:var(--orange)">—</div><div class="stat-mini-label">En cours</div></div></div>
+              <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(16,185,129,0.12)">🚌</div><div><div class="stat-mini-val" id="cs-v" style="color:var(--green)">—</div><div class="stat-mini-label">Véhicules actifs</div></div></div>
+              <div class="stat-mini"><div class="stat-mini-icon" style="background:rgba(239,68,68,0.12)">⚠️</div><div><div class="stat-mini-val" id="cs-i" style="color:var(--red)">—</div><div class="stat-mini-label">Incidents ouverts</div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-size:13px">💡</span><span class="card-title">Exemples de questions</span></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:0.35rem">
+              ${["Combien de trajets aujourd'hui ?","Quel véhicule a le plus de km ?","Chauffeurs disponibles ?","Recette moyenne par trajet ?","Incidents non résolus ce mois ?"].map(q=>`<button class="sug" style="text-align:left;border-radius:8px;padding:6px 10px;width:100%" onclick="ask('${q}')">${q}</button>`).join('')}
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span style="font-size:13px">🔒</span><span class="card-title">Sécurité</span></div>
+            <div class="card-body"><p style="font-size:0.76rem;color:var(--text2);line-height:1.5">L'assistant génère uniquement des requêtes <strong style="color:var(--green)">SELECT</strong>. Aucune modification de données n'est possible via le chat.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
 </div>
 
 <script>
 const API = 'https://transpobot-production-433d.up.railway.app';
 
-async function loadStats() {
+// Clock
+function tick(){ document.getElementById('clock').textContent = new Date().toLocaleTimeString('fr-FR'); }
+setInterval(tick,1000); tick();
+
+// Navigation
+function go(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el) el.classList.add('active');
+  const loaders = {vehicules:loadV,chauffeurs:loadC,trajets:loadT,incidents:loadI};
+  const key = '_'+id+'loaded';
+  if(loaders[id] && !window[key]){ loaders[id](); window[key]=true; }
+}
+
+// Filter rows
+function filterRows(id,q){
+  const t = document.getElementById(id);
+  if(!t) return;
+  t.querySelectorAll('tbody tr').forEach(r=>{
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// Helpers
+const fmt = n => n==null ? '—' : Number(n).toLocaleString('fr-FR');
+const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+const fmtDT = d => d ? new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+const badge = v => v ? `<span class="badge badge-${v}">${v.replace('_',' ')}</span>` : '—';
+
+async function api(path){ return (await fetch(API+path)).json(); }
+
+// Stats
+async function loadStats(){
   try {
-    const r = await fetch(`${API}/api/stats`);
-    const d = await r.json();
-    const grid = document.getElementById('stats');
-    const vals = [d.total_trajets, d.trajets_en_cours, d.vehicules_actifs, d.incidents_ouverts];
-    grid.querySelectorAll('.val').forEach((el, i) => el.textContent = vals[i] ?? '—');
-  } catch(e) { console.warn('Stats non disponibles'); }
-}
-
-async function loadTrajets() {
-  try {
-    const r = await fetch(`${API}/api/trajets/recent`);
-    const data = await r.json();
-    const container = document.getElementById('trajets-table');
-    if (!data.length) { container.innerHTML = '<p style="color:#94a3b8">Aucun trajet</p>'; return; }
-    const rows = data.slice(0, 8).map(t => `
-      <tr>
-        <td>${t.ligne}</td>
-        <td>${t.chauffeur_nom}</td>
-        <td>${new Date(t.date_heure_depart).toLocaleDateString('fr')}</td>
-        <td><span class="badge ${t.statut==='termine'?'badge-green':t.statut==='en_cours'?'badge-orange':'badge-red'}">${t.statut}</span></td>
-      </tr>`).join('');
-    container.innerHTML = `<table><thead><tr><th>Ligne</th><th>Chauffeur</th><th>Date</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>`;
-  } catch(e) { console.warn('Trajets non disponibles'); }
-}
-
-function ask(q) {
-  document.getElementById('user-input').value = q;
-  sendMessage();
-}
-
-function addMessage(role, text, sql = null) {
-  const box = document.getElementById('chat-box');
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  div.innerHTML = `<div class="bubble">${text}${sql ? `<div class="sql-preview">${sql}</div>` : ''}</div>`;
-  box.appendChild(div);
-  box.scrollTop = box.scrollHeight;
-}
-
-async function sendMessage() {
-  const input = document.getElementById('user-input');
-  const question = input.value.trim();
-  if (!question) return;
-  input.value = '';
-  addMessage('user', question);
-  addMessage('bot', '⏳ Analyse en cours...');
-
-  try {
-    const r = await fetch(`${API}/api/chat`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ question })
+    const d = await api('/api/stats');
+    document.getElementById('k-traj').textContent = d.total_trajets??'—';
+    document.getElementById('k-enc').textContent = d.trajets_en_cours??'—';
+    document.getElementById('k-veh').textContent = d.vehicules_actifs??'—';
+    document.getElementById('k-inc').textContent = d.incidents_ouverts??'—';
+    document.getElementById('k-rec').textContent = fmt(d.recette_totale)+' FCFA';
+    document.getElementById('k-upd').textContent = new Date().toLocaleTimeString('fr-FR');
+    document.getElementById('bv').textContent = d.vehicules_actifs??'—';
+    document.getElementById('bi').textContent = d.incidents_ouverts??'—';
+    ['cs-t','cs-e','cs-v','cs-i'].forEach((id,i)=>{
+      const el=document.getElementById(id);
+      if(el) el.textContent=[d.total_trajets,d.trajets_en_cours,d.vehicules_actifs,d.incidents_ouverts][i]??'—';
     });
-    const data = await r.json();
-    document.querySelector('.msg.bot:last-child').remove();
-    addMessage('bot', data.answer + (data.count !== undefined ? ` (${data.count} résultat${data.count > 1 ? 's' : ''})` : ''), data.sql);
+  } catch(e){}
+}
 
-    if (data.data && data.data.length > 0) {
-      const section = document.getElementById('results-section');
-      section.style.display = 'block';
-      const keys = Object.keys(data.data[0]);
-      const rows = data.data.map(row => `<tr>${keys.map(k => `<td>${row[k] ?? ''}</td>`).join('')}</tr>`).join('');
-      document.getElementById('results-table').innerHTML = `<table><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+// Dashboard trajets
+async function loadDashTrajets(){
+  try {
+    const data = await api('/api/trajets/recent');
+    document.getElementById('bc').textContent = data.length;
+    const el = document.getElementById('dash-trajets');
+    if(!data.length){ el.innerHTML='<div class="empty-state"><div class="ei">📭</div>Aucun trajet</div>'; return; }
+    el.innerHTML=`<table class="data-table"><thead><tr><th>Ligne</th><th>Chauffeur</th><th>Véhicule</th><th>Départ</th><th>Statut</th></tr></thead><tbody>
+      ${data.slice(0,8).map(t=>`<tr><td style="color:var(--text);font-weight:500">${t.ligne}</td><td>${t.chauffeur_nom}</td><td style="font-family:'Syne',monospace;font-size:0.75rem">${t.immatriculation}</td><td>${fmtDT(t.date_heure_depart)}</td><td>${badge(t.statut)}</td></tr>`).join('')}
+    </tbody></table>`;
+  } catch(e){}
+}
+
+// Véhicules
+async function loadV(){
+  try {
+    const data = await api('/api/vehicules');
+    let a=0,m=0,h=0;
+    data.forEach(v=>{ if(v.statut==='actif')a++; else if(v.statut==='maintenance')m++; else h++; });
+    document.getElementById('va').textContent=a;
+    document.getElementById('vm').textContent=m;
+    document.getElementById('vh').textContent=h;
+    document.getElementById('vwrap').innerHTML=`<table class="data-table" id="vtbl">
+      <thead><tr><th>Immatriculation</th><th>Type</th><th>Capacité</th><th>Statut</th><th>Kilométrage</th><th>Acquisition</th></tr></thead>
+      <tbody>${data.map(v=>`<tr>
+        <td style="color:var(--text);font-weight:600;font-family:'Syne',monospace">${v.immatriculation}</td>
+        <td>${v.type||'—'}</td><td>${v.capacite} pl.</td>
+        <td>${badge(v.statut)}</td>
+        <td>${fmt(v.kilometrage)} km</td>
+        <td>${fmtDate(v.date_acquisition)}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e){ document.getElementById('vwrap').innerHTML='<div class="empty-state"><div class="ei">❌</div>Erreur</div>'; }
+}
+
+// Chauffeurs
+async function loadC(){
+  try {
+    const data = await api('/api/chauffeurs');
+    document.getElementById('cwrap').innerHTML=`<table class="data-table" id="ctbl">
+      <thead><tr><th>Nom complet</th><th>N° Permis</th><th>Catégorie</th><th>Téléphone</th><th>Véhicule assigné</th><th>Embauche</th></tr></thead>
+      <tbody>${data.map(c=>`<tr>
+        <td style="color:var(--text);font-weight:500">${c.nom} ${c.prenom}</td>
+        <td style="font-family:'Syne',monospace;font-size:0.75rem">${c.numero_permis||'—'}</td>
+        <td>${c.categorie_permis||'—'}</td><td>${c.telephone||'—'}</td>
+        <td>${c.immatriculation?`<span style="color:var(--accent)">${c.immatriculation}</span>`:'<span style="color:var(--text3)">Non assigné</span>'}</td>
+        <td>${fmtDate(c.date_embauche)}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e){ document.getElementById('cwrap').innerHTML='<div class="empty-state"><div class="ei">❌</div>Erreur</div>'; }
+}
+
+// Trajets
+async function loadT(){
+  try {
+    const data = await api('/api/trajets/recent');
+    document.getElementById('twrap').innerHTML=`<table class="data-table" id="ttbl">
+      <thead><tr><th>Ligne</th><th>Chauffeur</th><th>Véhicule</th><th>Départ</th><th>Arrivée</th><th>Statut</th><th>Recette</th></tr></thead>
+      <tbody>${data.map(t=>`<tr>
+        <td style="color:var(--text);font-weight:500">${t.ligne}</td>
+        <td>${t.chauffeur_nom}</td>
+        <td style="font-family:'Syne',monospace;font-size:0.75rem">${t.immatriculation}</td>
+        <td>${fmtDT(t.date_heure_depart)}</td>
+        <td>${t.date_heure_arrivee?fmtDT(t.date_heure_arrivee):'—'}</td>
+        <td>${badge(t.statut)}</td>
+        <td style="color:var(--green)">${t.recette?fmt(t.recette)+' F':'—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e){ document.getElementById('twrap').innerHTML='<div class="empty-state"><div class="ei">❌</div>Erreur</div>'; }
+}
+
+// Incidents
+async function loadI(){
+  try {
+    const data = await api('/api/incidents');
+    if(!data||!data.length){ document.getElementById('iwrap').innerHTML='<div class="empty-state"><div class="ei">✅</div>Aucun incident</div>'; return; }
+    document.getElementById('iwrap').innerHTML=`<table class="data-table" id="itbl">
+      <thead><tr><th>Type</th><th>Description</th><th>Gravité</th><th>Date</th><th>Statut</th><th>Chauffeur</th></tr></thead>
+      <tbody>${data.map(i=>`<tr>
+        <td style="color:var(--text);font-weight:500">${i.type||'—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.description||'—'}</td>
+        <td>${badge(i.gravite)}</td>
+        <td>${fmtDT(i.date_incident)}</td>
+        <td>${i.resolu?'<span class="badge badge-resolu">Résolu</span>':'<span class="badge badge-ouvert">Ouvert</span>'}</td>
+        <td>${i.chauffeur_nom||'—'}</td>
+      </tr>`).join('')}</tbody></table>`;
+  } catch(e){ document.getElementById('iwrap').innerHTML='<div class="empty-state"><div class="ei">❌</div>Route /api/incidents non disponible</div>'; }
+}
+
+function loadAll(){ loadStats(); loadDashTrajets(); }
+
+// Chat
+function ask(q){
+  document.getElementById('chat-in').value=q;
+  if(!document.getElementById('page-chat').classList.contains('active'))
+    go('chat',document.querySelectorAll('.nav-item')[5]);
+  sendMsg();
+}
+
+function addMsg(role,html,sql=null){
+  const box=document.getElementById('chat-msgs');
+  const d=document.createElement('div');
+  d.className=`chat-msg ${role}`;
+  d.innerHTML=`<div class="chat-av">${role==='bot'?'🤖':'👤'}</div>
+    <div><div class="bubble">${html}</div>${sql?`<div class="sql-chip">${sql}</div>`:''}</div>`;
+  box.appendChild(d); box.scrollTop=box.scrollHeight;
+}
+
+function addLoading(){
+  const box=document.getElementById('chat-msgs');
+  const d=document.createElement('div');
+  d.className='chat-msg bot _loading';
+  d.innerHTML=`<div class="chat-av">🤖</div><div><div class="bubble"><div class="dots"><span></span><span></span><span></span></div></div></div>`;
+  box.appendChild(d); box.scrollTop=box.scrollHeight;
+}
+
+async function sendMsg(){
+  const inp=document.getElementById('chat-in');
+  const q=inp.value.trim(); if(!q) return;
+  inp.value='';
+  addMsg('user',q); addLoading();
+  try {
+    const r=await fetch(API+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    const d=await r.json();
+    document.querySelector('._loading')?.remove();
+    const cnt=d.count!=null?` <span style="color:var(--text3);font-size:0.76em">(${d.count} résultat${d.count>1?'s':''})</span>`:'';
+    addMsg('bot',(d.answer||'—')+cnt,d.sql||null);
+    if(d.data&&d.data.length){
+      const box=document.getElementById('chat-msgs');
+      const w=document.createElement('div');
+      w.style.paddingLeft='34px';
+      const keys=Object.keys(d.data[0]);
+      w.innerHTML=`<div class="res-wrap"><table><thead><tr>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${d.data.map(row=>`<tr>${keys.map(k=>`<td>${row[k]??'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+      box.appendChild(w); box.scrollTop=box.scrollHeight;
     }
-  } catch(e) {
-    document.querySelector('.msg.bot:last-child').remove();
-    addMessage('bot', '❌ Erreur de connexion au serveur.');
+  } catch(e){
+    document.querySelector('._loading')?.remove();
+    addMsg('bot','❌ Erreur de connexion au serveur.');
   }
 }
 
-loadStats();
-loadTrajets();
+loadAll();
 </script>
 </body>
 </html>

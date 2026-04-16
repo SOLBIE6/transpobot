@@ -243,3 +243,23 @@ INSERT INTO incidents (trajet_id, type, description, gravite, date_incident, res
 (15, 'accident', 'Accrochage léger à Pikine',            'moyen',  '2026-03-25 09:20:00', FALSE), -- ⚠ Ouvert
 (17, 'autre',    'Passager malaise, arrêt médical',      'grave',  '2026-03-21 06:45:00', TRUE);  -- Résolu
 -- Bilan : 3 incidents ouverts (ids 6, 9, 15) → badge nav affichera 3
+
+-- ====================== AJOUT DE 15 CHAUFFEURS SUPPLÉMENTAIRES ======================
+-- Pour atteindre un total de 20 chauffeurs
+
+INSERT INTO chauffeurs (nom, prenom, telephone, numero_permis, categorie_permis, vehicule_id, date_embauche) VALUES
+('NDIAYE', 'Moussa', '+221776543210', 'P-2023-006', 'D', 3, '2023-03-15'),
+('DIAW', 'Aissatou', '+221777654321', 'P-2022-007', 'B', NULL, '2022-11-20'),
+('SOW', 'Cheikh', '+221778765432', 'P-2021-008', 'D', 1, '2021-08-10'),
+('GUEYE', 'Fatou', '+221779876543', 'P-2024-009', 'D', 2, '2024-01-05'),
+('MBAYE', 'Oumar', '+221770987654', 'P-2020-010', 'C', 4, '2020-05-12'),
+('TOURE', 'Mariama', '+221771098765', 'P-2023-011', 'B', NULL, '2023-06-30'),
+('DIALLO', 'Abdoulaye', '+221772109876', 'P-2019-012', 'D', 5, '2019-09-18'),
+('SARR', 'Ndeye', '+221773210987', 'P-2022-013', 'D', 3, '2022-02-28'),
+('BA', 'Mamadou', '+221774321098', 'P-2021-014', 'C', NULL, '2021-12-10'),
+('CISSE', 'Ibrahima', '+221775432109', 'P-2024-015', 'D', 2, '2024-04-01'),
+('THIAM', 'Aminata', '+221776543298', 'P-2020-016', 'B', 4, '2020-07-22'),
+('GAYE', 'Ousmane', '+221777654387', 'P-2023-017', 'D', NULL, '2023-09-15'),
+('FALL', 'Awa', '+221778765476', 'P-2022-018', 'D', 1, '2022-03-05'),
+('NDIAYE', 'Pape', '+221779876565', 'P-2021-019', 'C', 5, '2021-11-12'),
+('SOW', 'Fatou', '+221770987676', 'P-2024-020', 'D', NULL, '2024-02-20');

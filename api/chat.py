@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 from db import execute_query
-import os, re, httpx, json
+import os, re, httpx, json, asyncio
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)  # Les variables Railway ont la priorité
 
 router = APIRouter()
 
@@ -137,8 +137,9 @@ async def call_openai(messages: list, api_key: str, retries: int = 2) -> dict | 
                 return extract_json(content)
 
             elif response.status_code == 429:
-                print(f"[OpenAI] Rate limit (tentative {attempt + 1})")
-                # Pas de sleep pour ne pas bloquer FastAPI — on passe au fallback
+                wait = 2 * (attempt + 1)  # 2s puis 4s
+                print(f"[OpenAI] Rate limit (tentative {attempt + 1}) → attente {wait}s")
+                await asyncio.sleep(wait)
                 continue
 
             else:

@@ -1,4 +1,4 @@
-const API = '';
+const API = 'http://127.0.0.1:8000';
 
 // Clock
 function tick() {
@@ -43,7 +43,7 @@ const fmtDT   = d => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit
 const badge   = v => v ? `<span class="badge badge-${v}">${v.replace('_', ' ')}</span>` : '—';
 
 async function api(path) {
-    return (await fetch(path)).json();
+    return (await fetch(API + path)).json();
 }
 
 // ====================== STATS + DASHBOARD ======================
@@ -277,7 +277,7 @@ async function sendMsg() {
     addLoading();
 
     try {
-        const r = await fetch('/api/chat', {
+        const r = await fetch(API + '/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: q }),

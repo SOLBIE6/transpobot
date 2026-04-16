@@ -613,15 +613,26 @@ SMALL_TALK_RESPONSES = {
 }
 
 def detect_small_talk(q: str) -> str | None:
-    """Détecte les messages conversationnels et retourne une réponse, sinon None."""
-    q = q.strip().rstrip("?!.,").lower()
-    # Correspondance exacte d'abord
-    if q in SMALL_TALK_RESPONSES:
-        return SMALL_TALK_RESPONSES[q]
-    # Correspondance partielle
-    for key, response in SMALL_TALK_RESPONSES.items():
-        if key in q:
-            return response
+    """Détecte les messages conversationnels de manière plus stricte."""
+    q_lower = q.strip().lower()
+
+    # Correspondances exactes ou très fortes uniquement
+    exact_matches = {
+        "hi": "Hi! TranspoBot here. What can I help you with today?",
+        "hello": "Hello! 👋 I'm TranspoBot, your fleet management assistant.",
+        "bonjour": "Bonjour ! 👋 Je suis TranspoBot, votre assistant de gestion de flotte.",
+        "salut": "Salut ! 😊 TranspoBot à votre service.",
+        "hey": "Hey ! Je suis là. Que voulez-vous savoir sur votre flotte ?",
+    }
+
+    if q_lower in exact_matches:
+        return exact_matches[q_lower]
+
+    # Pour les phrases plus longues, on vérifie des mots-clés entiers
+    if any(greeting in q_lower.split() for greeting in ["hi", "hello", "bonjour", "salut", "hey"]):
+        if len(q_lower.split()) <= 3:  # seulement si c'est une salutation courte
+            return "Bonjour ! 👋 Je suis TranspoBot. Posez-moi une question sur vos trajets, véhicules, chauffeurs ou recettes."
+
     return None
 
 

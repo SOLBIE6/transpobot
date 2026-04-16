@@ -277,18 +277,28 @@ async function sendMsg() {
     addLoading();
 
     try {
-        const r = await fetch('/api/chat', {
+        const response = await fetch('/api/chat', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: q }),
+            headers: { 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ 
+                question: q,
+                history: []        // ← Ajoute explicitement history (même vide)
+            }),
         });
-        const d = await r.json();
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Erreur serveur:", errorData);
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const d = await response.json();
 
         document.querySelector('._loading')?.remove();
 
-        const cnt = d.count != null
-            ? ` <span style="color:var(--text3);font-size:0.76em">(${d.count} résultat${d.count > 1 ? 's' : ''})</span>`
-            : '';
+        const cnt = d.count != null ? ` <span style="color:var(--text3);font-size:0.76em">(${d.count} résultat${d.count > 1 ? 's' : ''})</span>` : '';
         addMsg('bot', (d.answer || '—') + cnt, d.sql || null);
 
         if (d.data && d.data.length) {
@@ -310,7 +320,8 @@ async function sendMsg() {
         }
     } catch (e) {
         document.querySelector('._loading')?.remove();
-        addMsg('bot', '❌ Erreur de connexion au serveur.');
+        addMsg('bot', '❌ Erreur de connexion au serveur. Vérifie la console.');
+        console.error(e);
     }
 }
 

@@ -277,31 +277,44 @@ async function sendMsg() {
     addLoading();
 
     try {
+        const payload = {
+            question: q,
+            history: []
+        };
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json' 
+                'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
-                question: q,
-                history: []        // ← Ajoute explicitement history (même vide)
-            }),
+            body: JSON.stringify(payload)
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            console.error("Erreur serveur:", errorData);
-            throw new Error(`HTTP ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Erreur 422 détails :", errorData);
+
+            document.querySelector('._loading')?.remove();
+            
+            if (response.status === 422) {
+                addMsg('bot', '❌ Erreur 422 : Le format envoyé n\'est pas reconnu par le serveur.');
+            } else {
+                addMsg('bot', `❌ Erreur serveur (${response.status})`);
+            }
+            return;
         }
 
         const d = await response.json();
 
         document.querySelector('._loading')?.remove();
 
-        const cnt = d.count != null ? ` <span style="color:var(--text3);font-size:0.76em">(${d.count} résultat${d.count > 1 ? 's' : ''})</span>` : '';
+        const cnt = d.count != null 
+            ? ` <span style="color:var(--text3);font-size:0.76em">(${d.count} résultat${d.count > 1 ? 's' : ''})</span>` 
+            : '';
+
         addMsg('bot', (d.answer || '—') + cnt, d.sql || null);
 
-        if (d.data && d.data.length) {
+        if (d.data && d.data.length > 0) {
             const box = document.getElementById('chat-msgs');
             const w = document.createElement('div');
             w.style.paddingLeft = '34px';
@@ -318,9 +331,10 @@ async function sendMsg() {
             box.appendChild(w);
             box.scrollTop = box.scrollHeight;
         }
+
     } catch (e) {
         document.querySelector('._loading')?.remove();
-        addMsg('bot', '❌ Erreur de connexion au serveur. Vérifie la console.');
+        addMsg('bot', '❌ Impossible de contacter le serveur.');
         console.error(e);
     }
 }

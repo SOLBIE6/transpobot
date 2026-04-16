@@ -402,6 +402,119 @@ KEYWORD_QUERIES = [
             WHERE t.statut='termine' GROUP BY l.id, l.nom ORDER BY nb_trajets DESC""",
         "exp": "Trajets par ligne :"
     },
+    # ── RECETTES ENRICHIES ──
+    {
+        "keys": ["recette aujourd", "recette du jour", "recette ce jour", "recette journée", "recette journee"],
+        "sql": """SELECT SUM(recette) AS recette_aujourd_hui, COUNT(*) AS nb_trajets
+            FROM trajets WHERE statut='termine' AND DATE(date_heure_depart)=CURDATE()""",
+        "exp": "💰 Recette d'aujourd'hui :"
+    },
+    {
+        "keys": ["recette hier", "recette d'hier"],
+        "sql": """SELECT SUM(recette) AS recette_hier, COUNT(*) AS nb_trajets
+            FROM trajets WHERE statut='termine'
+            AND DATE(date_heure_depart)=DATE_SUB(CURDATE(),INTERVAL 1 DAY)""",
+        "exp": "💰 Recette d'hier :"
+    },
+    {
+        "keys": ["recette semaine", "recette cette semaine", "recette 7 jours"],
+        "sql": """SELECT SUM(recette) AS recette_semaine, COUNT(*) AS nb_trajets,
+              ROUND(AVG(recette),0) AS recette_moyenne
+            FROM trajets WHERE statut='termine'
+            AND date_heure_depart >= DATE_SUB(NOW(), INTERVAL 7 DAY)""",
+        "exp": "💰 Recette de la semaine :"
+    },
+    {
+        "keys": ["recette annee", "recette année", "recette annuelle", "recette cette annee"],
+        "sql": """SELECT SUM(recette) AS recette_annuelle, COUNT(*) AS nb_trajets,
+              ROUND(AVG(recette),0) AS recette_moyenne
+            FROM trajets WHERE statut='termine' AND YEAR(date_heure_depart)=YEAR(CURDATE())""",
+        "exp": "💰 Recette de l'année en cours :"
+    },
+    {
+        "keys": ["recette par ligne", "recette ligne", "recette par trajet type"],
+        "sql": """SELECT l.nom AS ligne, SUM(t.recette) AS recette_totale,
+              COUNT(t.id) AS nb_trajets, ROUND(AVG(t.recette),0) AS recette_moyenne
+            FROM trajets t JOIN lignes l ON t.ligne_id=l.id
+            WHERE t.statut='termine'
+            GROUP BY l.id, l.nom ORDER BY recette_totale DESC""",
+        "exp": "💰 Recette par ligne :"
+    },
+    {
+        "keys": ["recette par chauffeur", "recette chauffeur"],
+        "sql": """SELECT CONCAT(ch.nom,' ',ch.prenom) AS chauffeur,
+              SUM(t.recette) AS recette_totale, COUNT(t.id) AS nb_trajets,
+              ROUND(AVG(t.recette),0) AS recette_moyenne
+            FROM trajets t JOIN chauffeurs ch ON t.chauffeur_id=ch.id
+            WHERE t.statut='termine'
+            GROUP BY ch.id, ch.nom, ch.prenom ORDER BY recette_totale DESC LIMIT 10""",
+        "exp": "💰 Recette par chauffeur :"
+    },
+    {
+        "keys": ["recette par vehicule", "recette vehicule"],
+        "sql": """SELECT v.immatriculation, v.type,
+              SUM(t.recette) AS recette_totale, COUNT(t.id) AS nb_trajets
+            FROM trajets t JOIN vehicules v ON t.vehicule_id=v.id
+            WHERE t.statut='termine'
+            GROUP BY v.id, v.immatriculation, v.type ORDER BY recette_totale DESC""",
+        "exp": "💰 Recette par véhicule :"
+    },
+    {
+        "keys": ["recette janvier", "recette février", "recette fevrier", "recette mars",
+                 "recette avril", "recette mai", "recette juin", "recette juillet",
+                 "recette août", "recette aout", "recette septembre", "recette octobre",
+                 "recette novembre", "recette décembre", "recette decembre"],
+        "sql": """SELECT DATE_FORMAT(date_heure_depart,'%Y-%m') AS mois,
+              SUM(recette) AS recette_totale, COUNT(*) AS nb_trajets
+            FROM trajets WHERE statut='termine'
+            GROUP BY mois ORDER BY mois DESC LIMIT 12""",
+        "exp": "💰 Recettes par mois (12 derniers) — précisez un mois si besoin :"
+    },
+    {
+        "keys": ["recette", "chiffre d'affaires", "chiffre affaire"],
+        "sql": """SELECT
+              SUM(CASE WHEN DATE(date_heure_depart)=CURDATE() THEN recette ELSE 0 END) AS recette_aujourd_hui,
+              SUM(CASE WHEN MONTH(date_heure_depart)=MONTH(CURDATE()) AND YEAR(date_heure_depart)=YEAR(CURDATE()) THEN recette ELSE 0 END) AS recette_ce_mois,
+              SUM(CASE WHEN YEAR(date_heure_depart)=YEAR(CURDATE()) THEN recette ELSE 0 END) AS recette_annee,
+              SUM(recette) AS recette_totale_all_time
+            FROM trajets WHERE statut='termine'""",
+        "exp": "💰 Vue d'ensemble des recettes :"
+    },
+    # ── PASSAGERS ──
+    {
+        "keys": ["passager", "nb passager", "nombre passager", "affluence"],
+        "sql": """SELECT DATE_FORMAT(date_heure_depart,'%Y-%m') AS mois,
+              SUM(nb_passagers) AS total_passagers, COUNT(*) AS nb_trajets,
+              ROUND(AVG(nb_passagers),1) AS moy_passagers_par_trajet
+            FROM trajets WHERE statut='termine'
+            AND date_heure_depart >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)
+            GROUP BY mois ORDER BY mois DESC""",
+        "exp": "👥 Affluence passagers (3 derniers mois) :"
+    },
+    # ── TAUX ANNULATION ──
+    {
+        "keys": ["annulation", "taux annulation", "trajet annulé", "trajet annule"],
+        "sql": """SELECT
+              COUNT(*) AS total_trajets,
+              SUM(CASE WHEN statut='annule' THEN 1 ELSE 0 END) AS nb_annules,
+              ROUND(100*SUM(CASE WHEN statut='annule' THEN 1 ELSE 0 END)/COUNT(*),1) AS taux_annulation_pct
+            FROM trajets
+            WHERE MONTH(date_heure_depart)=MONTH(CURDATE()) AND YEAR(date_heure_depart)=YEAR(CURDATE())""",
+        "exp": "📉 Taux d'annulation ce mois :"
+    },
+    # ── EN COURS ──
+    {
+        "keys": ["en cours", "trajet en cours", "actif maintenant", "temps réel"],
+        "sql": """SELECT l.nom AS ligne, CONCAT(ch.nom,' ',ch.prenom) AS chauffeur,
+              v.immatriculation, t.date_heure_depart, t.nb_passagers
+            FROM trajets t
+            JOIN lignes l ON t.ligne_id=l.id
+            JOIN chauffeurs ch ON t.chauffeur_id=ch.id
+            JOIN vehicules v ON t.vehicule_id=v.id
+            WHERE t.statut='en_cours'
+            ORDER BY t.date_heure_depart DESC""",
+        "exp": "🟢 Trajets en cours en ce moment :"
+    },
 ]
 
 def keyword_fallback(question: str):
@@ -409,6 +522,81 @@ def keyword_fallback(question: str):
     for entry in KEYWORD_QUERIES:
         if any(k in q for k in entry["keys"]):
             return {"sql": entry["sql"].strip(), "explication": entry["exp"]}
+    return None
+
+
+# ── SMALL TALK & CONVERSATIONS ────────────────────────────────
+SMALL_TALK_RESPONSES = {
+    # Salutations
+    "bonjour":      "Bonjour ! 👋 Je suis **TranspoBot**, votre assistant intelligent de gestion de flotte.\nJe peux vous aider sur : recettes, trajets, chauffeurs, véhicules, incidents, rapports mensuels...\nQue souhaitez-vous savoir ?",
+    "bonsoir":      "Bonsoir ! 🌙 Je suis **TranspoBot**. Que puis-je faire pour vous ce soir ?\nTrajets du jour, recettes, état de la flotte — je suis disponible.",
+    "salut":        "Salut ! 😊 TranspoBot à votre service. Posez-moi vos questions sur la flotte.",
+    "hello":        "Hello! 👋 I'm TranspoBot, your fleet management assistant. Ask me anything about trips, drivers, vehicles or revenue!",
+    "hey":          "Hey ! Je suis là. Que voulez-vous savoir sur votre flotte ?",
+    "hi":           "Hi! TranspoBot here. What can I help you with today?",
+    "coucou":       "Coucou ! 😄 TranspoBot est là. Une question sur la flotte ?",
+    "salam":        "Wa alaykum salam ! 🤝 Je suis TranspoBot. Comment puis-je vous aider ?",
+    "assalamu":     "Wa alaykum salam ! 🤝 TranspoBot à votre service.",
+
+    # Comment ça va
+    "ca va":        "Je suis un assistant IA, donc toujours au top ! 😄 Et vous ? Qu'est-ce que je peux faire pour votre flotte aujourd'hui ?",
+    "ça va":        "Je suis un assistant IA, donc toujours au top ! 😄 Et vous ? Qu'est-ce que je peux faire pour votre flotte aujourd'hui ?",
+    "comment allez": "Je vais très bien, merci de demander ! 😊 Prêt à analyser vos données de flotte. Que souhaitez-vous consulter ?",
+    "comment vas":  "Toujours opérationnel ! 🤖 Prêt à analyser vos trajets, recettes et incidents. Que voulez-vous savoir ?",
+    "tu vas bien":  "Parfaitement bien, merci ! Je suis prêt à vous aider. Posez votre question.",
+    "vous allez bien": "Très bien merci ! Comment puis-je vous aider avec votre flotte ?",
+
+    # Présentations
+    "qui es-tu":    "Je suis **TranspoBot** 🤖, un assistant IA spécialisé en gestion de transport urbain au Sénégal.\n\nJe peux vous aider à :\n• 📊 Générer des rapports mensuels\n• 💰 Analyser les recettes et tendances\n• 🚌 Suivre l'état de la flotte\n• 👨‍✈️ Évaluer la performance des chauffeurs\n• ⚠️ Gérer les incidents\n\nPosez-moi une question en langage naturel !",
+    "qui etes-vous":"Je suis **TranspoBot** 🤖, votre assistant IA de gestion de flotte pour le projet GLSi ESP/UCAD.\nPosez-moi vos questions sur les trajets, véhicules, chauffeurs ou recettes !",
+    "qui es tu":    "Je suis **TranspoBot** 🤖, un assistant IA spécialisé en gestion de transport urbain au Sénégal.\n\nJe peux vous aider à :\n• 📊 Générer des rapports mensuels\n• 💰 Analyser les recettes et tendances\n• 🚌 Suivre l'état de la flotte\n• 👨‍✈️ Évaluer la performance des chauffeurs\n• ⚠️ Gérer les incidents\n\nPosez-moi une question en langage naturel !",
+    "présente-toi": "Je suis **TranspoBot** 🤖 — assistant IA de gestion de transport urbain (GLSi L3, ESP/UCAD).\n\nExemples de ce que vous pouvez me demander :\n• *Rapport du mois*\n• *Recette du mois précédent*\n• *Quel chauffeur performe le mieux ?*\n• *Véhicules en maintenance*\n• *Incidents non résolus*",
+    "presente-toi": "Je suis **TranspoBot** 🤖 — assistant IA de gestion de transport urbain (GLSi L3, ESP/UCAD).\n\nExemples de ce que vous pouvez me demander :\n• *Rapport du mois*\n• *Recette du mois précédent*\n• *Quel chauffeur performe le mieux ?*\n• *Véhicules en maintenance*\n• *Incidents non résolus*",
+    "tu fais quoi": "Je suis **TranspoBot**, votre assistant de gestion de flotte ! 🚌\nJe peux analyser vos données en temps réel :\n• Recettes et tendances financières\n• Performance des chauffeurs et véhicules\n• Rapports mensuels complets\n• Suivi des incidents",
+    "what can you do": "I'm TranspoBot 🤖 — I can help you with:\n• Monthly reports & revenue analysis\n• Driver & vehicle performance\n• Incident tracking\n• Fleet status\n\nJust ask in natural language!",
+    "aide":         "Voici ce que je sais faire 💡 :\n\n**Recettes :** *recette du mois, recette mois précédent, comparaison, évolution*\n**Rapports :** *rapport mensuel, bilan du mois, synthèse*\n**Chauffeurs :** *meilleur chauffeur, performance, classement, disponibles*\n**Véhicules :** *flotte, maintenance, hors service, kilométrage*\n**Incidents :** *incidents graves, non résolus, par chauffeur*\n**Lignes :** *ligne rentable, trajets par ligne*",
+    "help":         "Here's what I can do 💡 :\n\n**Revenue:** *monthly revenue, last month, comparison, trends*\n**Reports:** *monthly report, summary*\n**Drivers:** *best driver, performance, available*\n**Vehicles:** *fleet status, maintenance, mileage*\n**Incidents:** *open incidents, by driver, serious*",
+
+    # Remerciements
+    "merci":        "Avec plaisir ! 😊 N'hésitez pas si vous avez d'autres questions sur la flotte.",
+    "merci beaucoup": "De rien ! 🙏 Je suis là pour ça. Une autre question ?",
+    "thank you":    "You're welcome! 😊 Feel free to ask anything else.",
+    "thanks":       "Glad to help! Ask me anything about your fleet.",
+    "super":        "Ravi que ça vous aide ! 😊 Autre chose ?",
+    "parfait":      "Parfait ! 🎯 Autre chose que je puisse faire pour vous ?",
+    "génial":       "Merci ! 😄 N'hésitez pas pour d'autres analyses.",
+    "bien":         "Tant mieux ! Une autre question sur la flotte ?",
+    "nickel":       "😄 N'hésitez pas pour d'autres questions !",
+    "ok merci":     "De rien ! 🙏 À bientôt.",
+    "ok":           "D'accord ! Autre chose que je puisse faire pour vous ?",
+
+    # Au revoir
+    "au revoir":    "À bientôt ! 👋 Bonne gestion de votre flotte.",
+    "bye":          "Bye! 👋 Come back anytime you need fleet insights.",
+    "goodbye":      "Goodbye! 👋 Have a great day.",
+    "bonne journée":"Bonne journée à vous aussi ! 🌞",
+    "bonne soirée": "Bonne soirée ! 🌙 À bientôt.",
+    "à bientôt":    "À bientôt ! 👋",
+    "a bientot":    "À bientôt ! 👋",
+
+    # Divers
+    "test":         "Je fonctionne correctement ! ✅ Posez-moi une vraie question sur votre flotte.",
+    "ping":         "Pong ! 🏓 TranspoBot opérationnel.",
+    "es-tu là":     "Oui, je suis là ! 🤖 Prêt à vous aider. Quelle est votre question ?",
+    "tu es là":     "Oui, je suis là ! 🤖 Prêt à vous aider. Quelle est votre question ?",
+    "allo":         "Allô ! 📞 TranspoBot à l'écoute. Que souhaitez-vous savoir ?",
+}
+
+def detect_small_talk(q: str) -> str | None:
+    """Détecte les messages conversationnels et retourne une réponse, sinon None."""
+    q = q.strip().rstrip("?!.,").lower()
+    # Correspondance exacte d'abord
+    if q in SMALL_TALK_RESPONSES:
+        return SMALL_TALK_RESPONSES[q]
+    # Correspondance partielle
+    for key, response in SMALL_TALK_RESPONSES.items():
+        if key in q:
+            return response
     return None
 
 
@@ -484,20 +672,10 @@ async def chat(msg: ChatMessage):
         q       = msg.question.strip()
         q_lower = q.lower()
 
-        # Small talk direct (pas besoin d'IA)
-        if any(k in q_lower for k in ["bonjour", "salut", "hello", "hey", "bonsoir", "merci", "au revoir"]):
-            responses = {
-                "merci":     "Avec plaisir ! N'hésitez pas si vous avez d'autres questions.",
-                "au revoir": "À bientôt ! Bonne gestion de votre flotte.",
-            }
-            for key, rep in responses.items():
-                if key in q_lower:
-                    return {"answer": rep, "data": [], "sql": None, "conseil": None}
-            return {
-                "answer": "Bonjour ! Je suis TranspoBot, votre assistant de gestion de flotte. "
-                          "Posez-moi vos questions sur les trajets, véhicules, chauffeurs ou incidents.",
-                "data": [], "sql": None, "conseil": None
-            }
+        # ── SMALL TALK & CONVERSATIONS (sans IA, réponses instantanées) ──
+        small_talk = detect_small_talk(q_lower)
+        if small_talk:
+            return {"answer": small_talk, "data": [], "sql": None, "conseil": None}
 
         # 1. Appel OpenAI (IA principale)
         llm_result, llm_error = await ask_openai(q, msg.history)

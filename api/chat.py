@@ -66,7 +66,6 @@ R: {"sql":null,"explication":"Bonjour ! Je suis TranspoBot, votre assistant de g
 """
 
 # ── FALLBACK MOTS-CLÉS (secours si API indisponible) ───────────
-# Ordre important : du plus specifique au plus general
 KEYWORD_QUERIES = [
     {
         "keys": ["meilleur chauffeur", "plus de trajet", "classement chauffeur", "top chauffeur"],
@@ -144,8 +143,7 @@ KEYWORD_QUERIES = [
     },
     {
         "keys": ["aujourd'hui", "aujourd hui", "ce jour"],
-        "sql": """SELECT COUNT(*) AS total FROM trajets
-            WHERE DATE(date_heure_depart) = CURDATE()""",
+        "sql": "SELECT COUNT(*) AS total FROM trajets WHERE DATE(date_heure_depart) = CURDATE()",
         "exp": "Nombre de trajets aujourd'hui :"
     },
     {
@@ -192,14 +190,18 @@ def keyword_fallback(question: str):
             return {"sql": entry["sql"].strip(), "explication": entry["exp"]}
     return None
 
-# ── APPEL API CLAUDE (Anthropic) ───────────────────────────────
-async def ask_claude(question: str, history: list = []) -> tuple:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not api_key or len(api_key) < 20:
-        return None, "Cle Anthropic manquante dans le fichier .env (variable ANTHROPIC_API_KEY)"
 
-    # Construire les messages avec historique (max 10 derniers echanges)
-    messages = []
+# ── APPEL API OPENAI ───────────────────────────────────────────
+async def ask_openai(question: str, history: list = []) -> tuple:
+    api_key   = os.getenv("OPENAI_API_KEY", "")
+    model     = os.getenv("LLM_MODEL", "gpt-4o-mini")
+    base_url  = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
+
+    if not api_key or len(api_key) < 20:
+        return None, "Clé OpenAI manquante dans le fichier .env (variable OPENAI_API_KEY)"
+
+    # Construire les messages : system + historique (max 10) + question
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for h in history[-10:]:
         messages.append({"role": h["role"], "content": h["content"]})
     messages.append({"role": "user", "content": question})
@@ -207,81 +209,82 @@ async def ask_claude(question: str, history: list = []) -> tuple:
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             r = await client.post(
-                "https://api.anthropic.com/v1/messages",
+                f"{base_url}/chat/completions",
                 headers={
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
                 },
                 json={
-                    "model": "claude-haiku-4-5-20251001",  # Rapide et economique
-                    "max_tokens": 1024,
-                    "system": SYSTEM_PROMPT,
+                    "model": model,
                     "messages": messages,
+                    "temperature": 0,
+                    "max_tokens": 1024,
                 },
             )
 
-            print(f"[Claude] status={r.status_code}")
+            print(f"[OpenAI] status={r.status_code}")
 
             if r.status_code == 401:
-                return None, "Cle Anthropic invalide — verifie ANTHROPIC_API_KEY dans .env"
+                return None, "Clé OpenAI invalide — vérifie OPENAI_API_KEY dans .env"
             if r.status_code == 429:
-                return None, "Quota Anthropic depasse — reessaie dans quelques instants"
+                return None, "Quota OpenAI dépassé — réessaie dans quelques instants"
             if r.status_code != 200:
-                print("[Claude] erreur:", r.text[:300])
-                return None, f"Erreur API Claude HTTP {r.status_code}"
+                print("[OpenAI] erreur:", r.text[:300])
+                return None, f"Erreur API OpenAI HTTP {r.status_code}"
 
-            data = r.json()
-            content = data["content"][0]["text"]
-            print(f"[Claude] reponse OK: {content[:120]}")
+            data    = r.json()
+            content = data["choices"][0]["message"]["content"]
+            print(f"[OpenAI] réponse OK: {content[:120]}")
 
-            # Nettoyer les backticks markdown eventuels
+            # Nettoyer les éventuels backticks markdown
             content = re.sub(r'```json\s*', '', content)
             content = re.sub(r'```\s*', '', content)
 
             match = re.search(r'\{.*\}', content, re.DOTALL)
             if not match:
-                return None, "Reponse Claude non parseable"
+                return None, "Réponse OpenAI non parseable"
 
             return json.loads(match.group()), None
 
     except httpx.TimeoutException:
-        return None, "Timeout — Claude ne repond pas (>30s)"
+        return None, "Timeout — OpenAI ne répond pas (>30s)"
     except json.JSONDecodeError as e:
-        print("[Claude] JSON invalide:", str(e))
-        return None, "Reponse JSON invalide"
+        print("[OpenAI] JSON invalide:", str(e))
+        return None, "Réponse JSON invalide"
     except Exception as e:
-        print("[Claude] exception:", str(e))
-        return None, f"Erreur reseau : {str(e)}"
+        print("[OpenAI] exception:", str(e))
+        return None, f"Erreur réseau : {str(e)}"
+
 
 # ── ROUTE CHAT ─────────────────────────────────────────────────
 @router.post("/chat")
 async def chat(msg: ChatMessage):
     try:
-        q = msg.question.strip()
+        q       = msg.question.strip()
         q_lower = q.lower()
 
         # Small talk direct (pas besoin d'IA)
         if any(k in q_lower for k in ["bonjour", "salut", "hello", "hey", "bonsoir", "merci", "au revoir"]):
             responses = {
-                "merci": "Avec plaisir ! N'hesitez pas si vous avez d'autres questions.",
-                "au revoir": "A bientot ! Bonne gestion de votre flotte.",
+                "merci":     "Avec plaisir ! N'hésitez pas si vous avez d'autres questions.",
+                "au revoir": "À bientôt ! Bonne gestion de votre flotte.",
             }
             for key, rep in responses.items():
                 if key in q_lower:
                     return {"answer": rep, "data": [], "sql": None, "conseil": None}
             return {
-                "answer": "Bonjour ! Je suis TranspoBot, votre assistant de gestion de flotte. Posez-moi vos questions sur les trajets, vehicules, chauffeurs ou incidents.",
+                "answer": "Bonjour ! Je suis TranspoBot, votre assistant de gestion de flotte. "
+                          "Posez-moi vos questions sur les trajets, véhicules, chauffeurs ou incidents.",
                 "data": [], "sql": None, "conseil": None
             }
 
-        # 1. Appel Claude (IA principale)
-        llm_result, llm_error = await ask_claude(q, msg.history)
+        # 1. Appel OpenAI (IA principale)
+        llm_result, llm_error = await ask_openai(q, msg.history)
 
         if llm_result:
-            sql      = llm_result.get("sql")
-            exp      = llm_result.get("explication") or "Voici le resultat :"
-            conseil  = llm_result.get("conseil")
+            sql    = llm_result.get("sql")
+            exp    = llm_result.get("explication") or "Voici le résultat :"
+            conseil = llm_result.get("conseil")
 
             if not sql or str(sql).strip().lower() in ("null", "none", ""):
                 return {"answer": exp, "data": [], "sql": None, "conseil": conseil}
@@ -289,34 +292,33 @@ async def chat(msg: ChatMessage):
             try:
                 data = execute_query(sql)
                 return {
-                    "answer": exp,
-                    "data": data,
-                    "sql": sql,
-                    "count": len(data),
+                    "answer":  exp,
+                    "data":    data,
+                    "sql":     sql,
+                    "count":   len(data),
                     "conseil": conseil,
                 }
             except Exception as e:
-                # SQL genere mais erreur d'execution -> on tente le fallback
                 print(f"[SQL Error] {str(e)}")
                 return {
-                    "answer": f"Requete generee mais erreur d'execution : {str(e)}",
+                    "answer": f"Requête générée mais erreur d'exécution : {str(e)}",
                     "data": [], "sql": sql, "conseil": None
                 }
 
-        # 2. Fallback mots-cles (si Claude indisponible)
-        print(f"[Fallback] Claude KO : {llm_error}")
+        # 2. Fallback mots-clés (si OpenAI indisponible)
+        print(f"[Fallback] OpenAI KO : {llm_error}")
         fallback = keyword_fallback(q)
 
         if fallback:
             try:
                 data = execute_query(fallback["sql"])
                 return {
-                    "answer": fallback["explication"],
-                    "data": data,
-                    "sql": fallback["sql"],
-                    "count": len(data),
+                    "answer":  fallback["explication"],
+                    "data":    data,
+                    "sql":     fallback["sql"],
+                    "count":   len(data),
                     "conseil": None,
-                    "mode": "hors-ligne",  # Info pour le frontend
+                    "mode":    "hors-ligne",
                 }
             except Exception as e:
                 return {
@@ -324,9 +326,10 @@ async def chat(msg: ChatMessage):
                     "data": [], "sql": fallback["sql"], "conseil": None
                 }
 
-        # 3. Rien trouve
+        # 3. Rien trouvé
         return {
-            "answer": f"Service temporairement indisponible ({llm_error}). Essayez : trajets, vehicules, chauffeurs, incidents, recette, maintenance.",
+            "answer": f"Service temporairement indisponible ({llm_error}). "
+                      "Essayez : trajets, véhicules, chauffeurs, incidents, recette, maintenance.",
             "data": [], "sql": None, "conseil": None
         }
 

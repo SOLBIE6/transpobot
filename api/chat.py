@@ -110,46 +110,56 @@ def build_messages(question: str, history: list) -> list:
     return messages
 
 
-async def call_openai(messages: list, api_key: str, retries: int = 2) -> dict | None:
-    """Appelle OpenAI GPT-4o-mini avec retry automatique."""
+async def call_gemini(messages: list, api_key: str, retries: int = 2) -> dict | None:
+    """Appelle Gemini 2.0 Flash avec retry automatique."""
+    # Convertir le format OpenAI → Gemini
+    system_text = ""
+    gemini_contents = []
+    for m in messages:
+        if m["role"] == "system":
+            system_text = m["content"]
+        elif m["role"] == "user":
+            gemini_contents.append({"role": "user", "parts": [{"text": m["content"]}]})
+        elif m["role"] == "assistant":
+            gemini_contents.append({"role": "model", "parts": [{"text": m["content"]}]})
+
+    payload = {
+        "system_instruction": {"parts": [{"text": system_text}]},
+        "contents": gemini_contents,
+        "generationConfig": {
+            "temperature": 0.1,
+            "maxOutputTokens": 700,
+            "responseMimeType": "application/json"  # Force JSON natif
+        }
+    }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+
     for attempt in range(retries):
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "gpt-4o-mini",
-                        "messages": messages,
-                        "temperature": 0.1,
-                        "max_tokens": 700,
-                        "response_format": {"type": "json_object"}  # Force JSON natif
-                    }
-                )
+                response = await client.post(url, json=payload)
 
             if response.status_code == 200:
-                content = response.json()["choices"][0]["message"]["content"]
-                print(f"[OpenAI] Tentative {attempt + 1} → OK")
-                print(f"[OpenAI] Réponse : {content[:300]}")
+                content = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+                print(f"[Gemini] Tentative {attempt + 1} → OK")
+                print(f"[Gemini] Réponse : {content[:300]}")
                 return extract_json(content)
 
             elif response.status_code == 429:
-                wait = 2 * (attempt + 1)  # 2s puis 4s
-                print(f"[OpenAI] Rate limit (tentative {attempt + 1}) → attente {wait}s")
+                wait = 2 * (attempt + 1)
+                print(f"[Gemini] Rate limit (tentative {attempt + 1}) → attente {wait}s")
                 await asyncio.sleep(wait)
                 continue
 
             else:
-                print(f"[OpenAI] Erreur {response.status_code}: {response.text[:200]}")
+                print(f"[Gemini] Erreur {response.status_code}: {response.text[:200]}")
                 return None
 
         except httpx.TimeoutException:
-            print(f"[OpenAI] Timeout (tentative {attempt + 1})")
+            print(f"[Gemini] Timeout (tentative {attempt + 1})")
         except Exception as e:
-            print(f"[OpenAI] Exception (tentative {attempt + 1}): {e}")
+            print(f"[Gemini] Exception (tentative {attempt + 1}): {e}")
 
     return None
 
@@ -170,12 +180,12 @@ async def chat(msg: ChatMessage):
             "sql": None
         }
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
 
-    # 2. Appel OpenAI en priorité (si clé disponible)
+    # 2. Appel Gemini en priorité (si clé disponible)
     if api_key:
         messages = build_messages(q, msg.history)
-        result = await call_openai(messages, api_key)
+        result = await call_gemini(messages, api_key)
 
         if result:
             sql = result.get("sql")
@@ -192,7 +202,7 @@ async def chat(msg: ChatMessage):
                     }
                 try:
                     data = execute_query(sql)
-                    print(f"[OpenAI] SQL exécuté → {len(data)} résultats")
+                    print(f"[Gemini] SQL exécuté → {len(data)} résultats")
                     return {
                         "answer": explication,
                         "data": data,
@@ -216,9 +226,9 @@ async def chat(msg: ChatMessage):
                     "conseil": conseil
                 }
         else:
-            print("[OpenAI] Échec → passage au fallback mots-clés")
+            print("[Gemini] Échec → passage au fallback mots-clés")
     else:
-        print("[CHAT] Clé OpenAI absente → fallback mots-clés uniquement")
+        print("[CHAT] Clé Gemini absente → fallback mots-clés uniquement")
 
     # 3. Fallback mots-clés (seulement si OpenAI échoue ou clé absente)
     if fallback := keyword_fallback(q):

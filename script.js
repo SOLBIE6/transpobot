@@ -57,6 +57,8 @@ async function loadStats() {
         document.getElementById('k-rec').textContent  = fmt(d.recette_totale) + ' FCFA';
         document.getElementById('k-upd').textContent  = new Date().toLocaleTimeString('fr-FR');
         document.getElementById('bv').textContent     = d.vehicules_actifs ?? '—';
+        const bi = document.getElementById('bi');
+        if (bi) bi.textContent = d.incidents_ouverts ?? '—';
 
         ['cs-t', 'cs-e', 'cs-v', 'cs-i'].forEach((id, i) => {
             const el = document.getElementById(id);

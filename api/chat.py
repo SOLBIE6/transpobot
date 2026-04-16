@@ -365,6 +365,31 @@ KEYWORD_QUERIES = [
         "sql": "SELECT immatriculation, type, kilometrage FROM vehicules WHERE statut='maintenance'",
         "exp": "Véhicules en maintenance :"
     },
+    # ── MAINTENANCE DÉTAILLÉE ──
+    {
+        "keys": ["combien maintenance", "nombre maintenance", "total maintenance", "véhicules en maintenance", "vehicules en maintenance"],
+        "sql": """
+            SELECT COUNT(*) AS total_en_maintenance,
+              GROUP_CONCAT(immatriculation ORDER BY immatriculation SEPARATOR ', ') AS vehicules
+            FROM vehicules WHERE statut='maintenance'
+        """,
+        "exp": "Nombre et liste des véhicules en maintenance :"
+    },
+    # ── INCIDENTS RÉSOLUS GRAVES ──
+    {
+        "keys": ["incident resolu grave", "incident résolu grave", "grave resolu", "grave résolu", "resolus graves", "résolus graves", "incidents graves resolus", "incidents graves résolus"],
+        "sql": """
+            SELECT i.type, i.description, i.date_incident,
+              CONCAT(ch.nom,' ',ch.prenom) AS chauffeur, v.immatriculation
+            FROM incidents i
+            LEFT JOIN trajets t ON i.trajet_id=t.id
+            LEFT JOIN chauffeurs ch ON t.chauffeur_id=ch.id
+            LEFT JOIN vehicules v ON t.vehicule_id=v.id
+            WHERE i.gravite='grave' AND i.resolu=TRUE
+            ORDER BY i.date_incident DESC LIMIT 50
+        """,
+        "exp": "Incidents graves résolus :"
+    },
     {
         "keys": ["plus de km", "kilometrage", "kilométrage"],
         "sql": "SELECT immatriculation, type, kilometrage FROM vehicules ORDER BY kilometrage DESC LIMIT 5",
